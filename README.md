@@ -61,6 +61,7 @@ A complete, offline-first, professional Point of Sale (POS) and inventory manage
 ### Method 1: Double-Click Launcher (Windows)
 Double-click **`Start-POS-PLUS.bat`** in this folder. It will start the system and automatically launch the software in clean desktop application mode.
 
+
 ### Method 2: Command Line
 ```powershell
 npm run dev
