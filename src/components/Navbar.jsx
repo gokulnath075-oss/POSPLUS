@@ -3,6 +3,7 @@ import {
   ShoppingBag, Tag, Package, Users, RotateCcw, BarChart3,
   Settings, Clock, Sparkles, ShieldCheck, Keyboard, LogOut, Lock, Laptop, User
 } from 'lucide-react';
+import { getEffectiveCloudCredentials } from '../config/databaseConfig';
 
 export function Navbar({ activeTab, onTabChange, settings, currentUser, onLogout, onAdminUnlockPrompt }) {
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -13,6 +14,7 @@ export function Navbar({ activeTab, onTabChange, settings, currentUser, onLogout
   }, []);
 
   const isAdmin = currentUser?.role === 'admin';
+  const { isConfigured: isCloudActive } = getEffectiveCloudCredentials(settings);
 
   const navItems = [
     { id: 'pos', label: 'POS Billing', icon: ShoppingBag, hotkey: 'F1', adminOnly: false },
@@ -51,14 +53,25 @@ export function Navbar({ activeTab, onTabChange, settings, currentUser, onLogout
             <h1 className="text-sm font-black text-white tracking-wide uppercase">
               {settings?.storeName || 'POS PLUS APPARELS'}
             </h1>
-            <span
-              onClick={() => onTabChange('settings')}
-              className="text-[10px] px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-semibold flex items-center gap-1.5 cursor-pointer hover:bg-emerald-500/20 transition"
-              title="Automatic Built-in Database is active and saving all sales, products, and Khata records in real time. Click to view Database Settings."
-            >
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-              Auto-Saved DB
-            </span>
+            {isCloudActive ? (
+              <span
+                onClick={() => onTabChange('settings')}
+                className="text-[10px] px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-semibold flex items-center gap-1.5 cursor-pointer hover:bg-emerald-500/20 transition"
+                title="Real-time multi-counter cloud synchronization is ACTIVE. Counters are in sync."
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                Cloud Synced
+              </span>
+            ) : (
+              <span
+                onClick={() => onTabChange('settings')}
+                className="text-[10px] px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/30 font-semibold flex items-center gap-1.5 cursor-pointer hover:bg-amber-500/20 transition"
+                title="Running in local mode. Click to connect Cloud Sync so all counters share data."
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+                Local Mode (Not Synced)
+              </span>
+            )}
           </div>
           <p className="text-[11px] text-slate-400 truncate max-w-xs">{settings?.tagline || 'Fashion & Lifestyle Retail'}</p>
         </div>

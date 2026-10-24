@@ -1,5 +1,7 @@
 import Dexie from 'dexie';
 import { INITIAL_PRODUCTS, INITIAL_CUSTOMERS, INITIAL_SETTINGS, INITIAL_USERS } from './seedData';
+import { getEffectiveCloudCredentials } from '../config/databaseConfig';
+import { syncSaleToCloud, syncCustomerToCloud } from '../services/cloudSync';
 
 export const db = new Dexie('PosPlusClothingDB');
 
@@ -119,6 +121,14 @@ export async function saveOrUpdateCustomer(customerData) {
     customerId = await db.customers.add(payload);
   }
 
+  // Auto-sync customer to cloud if configured
+  getStoreSettings().then(settings => {
+    const { url, key, isConfigured } = getEffectiveCloudCredentials(settings);
+    if (isConfigured) {
+      syncCustomerToCloud(payload, url, key);
+    }
+  }).catch(() => {});
+
   return { ...payload, id: customerId };
 }
 
@@ -199,8 +209,30 @@ export async function processSaleTransaction(saleData) {
           visitCount: newVisits,
           creditBalance: newCreditBalance,
         });
+
+        // Auto-sync customer update to cloud
+        getStoreSettings().then(settings => {
+          const { url, key, isConfigured } = getEffectiveCloudCredentials(settings);
+          if (isConfigured) {
+            syncCustomerToCloud({
+              ...customer,
+              loyaltyPoints: newPoints,
+              totalSpent: newTotalSpent,
+              visitCount: newVisits,
+              creditBalance: newCreditBalance,
+            }, url, key);
+          }
+        }).catch(() => {});
       }
     }
+
+    // Auto-sync sale to cloud
+    getStoreSettings().then(settings => {
+      const { url, key, isConfigured } = getEffectiveCloudCredentials(settings);
+      if (isConfigured) {
+        syncSaleToCloud(saleData, url, key);
+      }
+    }).catch(() => {});
 
     return saleId;
   });

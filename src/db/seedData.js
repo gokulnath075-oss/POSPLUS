@@ -214,9 +214,9 @@ export const INITIAL_SETTINGS = {
   pointsPer100: 1, // 1 point for every ₹100 spent
   pointValueInRupees: 1, // 1 point = ₹1
   counterName: "Counter 1", // 'Counter 1' | 'Counter 2' | 'Owner Mobile' | 'Branch 1'
-  enableCloudSync: false,
-  supabaseUrl: "",
-  supabaseAnonKey: "",
+  enableCloudSync: true,
+  supabaseUrl: "https://ujsnfrvozqlzcvrmiqtk.supabase.co",
+  supabaseAnonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVqc25mcnZvenFsemN2cm1pcXRrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI3NDE2NDEsImV4cCI6MjEwODMxNzY0MX0.BIhdEzZEAo0xqdcAXrI6MkvmbtsTvqlxoJU2QaYFwzM",
 };
 
 export const INITIAL_USERS = [

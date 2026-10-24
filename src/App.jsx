@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { initializeDatabase, getStoreSettings, getAllUsers, authenticateUser } from './db/db';
+import { initializeDatabase, getStoreSettings, saveStoreSettings, getAllUsers, authenticateUser } from './db/db';
 import { Navbar } from './components/Navbar';
 import { PosScreen } from './components/pos/PosScreen';
 import { BarcodeTagGenerator } from './components/barcode/BarcodeTagGenerator';
@@ -9,6 +9,8 @@ import { ReturnExchange } from './components/returns/ReturnExchange';
 import { ReportsDashboard } from './components/reports/ReportsDashboard';
 import { StoreSettings } from './components/settings/StoreSettings';
 import { LoginModal } from './components/auth/LoginModal';
+import { DEFAULT_SUPABASE_URL, DEFAULT_SUPABASE_KEY, getEffectiveCloudCredentials } from './config/databaseConfig';
+import { initRealtimeCloudSync, pullCloudDataToLocal } from './services/cloudSync';
 import { Loader2, ShieldAlert, X, ArrowRight, Lock } from 'lucide-react';
 
 export default function App() {
@@ -39,7 +41,15 @@ export default function App() {
       try {
         await initializeDatabase();
         const loadedSettings = await getStoreSettings();
-        setSettings(loadedSettings);
+        const effective = {
+          ...loadedSettings,
+          supabaseUrl: loadedSettings?.supabaseUrl || DEFAULT_SUPABASE_URL,
+          supabaseAnonKey: loadedSettings?.supabaseAnonKey || DEFAULT_SUPABASE_KEY,
+        };
+        if (!loadedSettings?.supabaseUrl || !loadedSettings?.supabaseAnonKey) {
+          await saveStoreSettings(effective).catch(() => {});
+        }
+        setSettings(effective);
 
         const users = await getAllUsers();
         setAvailableUsers(users);
@@ -51,6 +61,24 @@ export default function App() {
     }
     setup();
   }, []);
+
+  // Real-time Multi-Device Cloud Synchronization
+  useEffect(() => {
+    const { url, key, isConfigured } = getEffectiveCloudCredentials(settings);
+    if (isConfigured) {
+      // 1. Initial pull on startup to get latest sales, customers, and stock from other counters
+      pullCloudDataToLocal(url, key).catch(err => console.warn('Initial cloud sync:', err));
+
+      // 2. Open realtime WebSocket listener for live multi-counter synchronization
+      const subInstance = initRealtimeCloudSync(url, key, (table, payload) => {
+        pullCloudDataToLocal(url, key).catch(err => console.warn('Realtime refresh:', err));
+      });
+
+      return () => {
+        subInstance?.unsubscribe?.();
+      };
+    }
+  }, [settings?.supabaseUrl, settings?.supabaseAnonKey]);
 
   // Global Function Keys (F1: POS, F2: Barcode Tag, F3: Inventory, F4: Khata, F5: Returns, F6: Reports)
   useEffect(() => {
