@@ -15,7 +15,7 @@ import { calculateCartTotals } from '../../utils/gst';
 import { formatCurrency } from '../../utils/formatters';
 import { playScanSound, playErrorSound, playSuccessSound } from '../../utils/sound';
 
-export function PosScreen({ settings }) {
+export function PosScreen({ settings, currentUser }) {
   // Live products & categories from Dexie
   const products = useLiveQuery(() => db.products.toArray(), []) || [];
   const heldBillsCount = useLiveQuery(() => db.heldBills.count(), []) || 0;
@@ -197,6 +197,9 @@ export function PosScreen({ settings }) {
       customerName: customer?.name || 'Walk-in Customer',
       customerPhone: customer?.phone || '',
       customerGstin: customer?.gstin || '',
+      cashierName: currentUser?.name || 'Admin',
+      counterName: currentUser?.counterName || settings?.counterName || 'Counter 1',
+      salesperson: currentUser?.username || 'admin',
       items: cartTotals.items,
       subtotal: cartTotals.subtotal,
       taxableSubtotal: cartTotals.taxableSubtotal,

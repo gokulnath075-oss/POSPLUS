@@ -59,8 +59,14 @@ export function ThermalReceipt({ sale, settings, qrDataUrl }) {
         )}
         <div className="flex justify-between mt-0.5 text-gray-600">
           <span>Mode: <strong className="uppercase text-black">{sale.paymentMethod}</strong></span>
-          <span>Cashier: Admin</span>
+          <span>Cashier: {sale.cashierName || 'Admin'}</span>
         </div>
+        {sale.counterName && (
+          <div className="text-right text-[9px] text-gray-500">
+            Terminal: {sale.counterName}
+          </div>
+        )}
+
       </div>
 
       {/* Item Table */}

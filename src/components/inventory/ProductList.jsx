@@ -8,7 +8,8 @@ import {
 import { ProductFormModal } from './ProductFormModal';
 import { formatCurrency } from '../../utils/formatters';
 
-export function ProductList({ onNavigateToBarcodeTag }) {
+export function ProductList({ onNavigateToBarcodeTag, currentUser }) {
+  const isAdmin = currentUser?.role === 'admin';
   const products = useLiveQuery(() => db.products.toArray(), []) || [];
 
   const [search, setSearch] = useState('');
@@ -116,16 +117,18 @@ export function ProductList({ onNavigateToBarcodeTag }) {
           >
             <Download className="w-4 h-4" /> Export CSV
           </button>
-          <button
-            type="button"
-            onClick={() => {
-              setEditingProduct(null);
-              setIsModalOpen(true);
-            }}
-            className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-bold shadow-lg shadow-indigo-600/30 transition cursor-pointer"
-          >
-            <Plus className="w-4 h-4" /> Add Garment
-          </button>
+          {isAdmin && (
+            <button
+              type="button"
+              onClick={() => {
+                setEditingProduct(null);
+                setIsModalOpen(true);
+              }}
+              className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-bold shadow-lg shadow-indigo-600/30 transition cursor-pointer"
+            >
+              <Plus className="w-4 h-4" /> Add Garment
+            </button>
+          )}
         </div>
       </div>
 
@@ -308,28 +311,32 @@ export function ProductList({ onNavigateToBarcodeTag }) {
                             <Tag className="w-3.5 h-3.5" />
                           </button>
 
-                          {/* Edit */}
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setEditingProduct(p);
-                              setIsModalOpen(true);
-                            }}
-                            title="Edit product"
-                            className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg transition"
-                          >
-                            <Edit className="w-3.5 h-3.5" />
-                          </button>
+                          {/* Edit (Admin only) */}
+                          {isAdmin && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditingProduct(p);
+                                setIsModalOpen(true);
+                              }}
+                              title="Edit product"
+                              className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg transition"
+                            >
+                              <Edit className="w-3.5 h-3.5" />
+                            </button>
+                          )}
 
-                          {/* Delete */}
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteProduct(p.id, p.name)}
-                            title="Delete product"
-                            className="p-1.5 text-slate-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
+                          {/* Delete (Admin only) */}
+                          {isAdmin && (
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteProduct(p.id, p.name)}
+                              title="Delete product"
+                              className="p-1.5 text-slate-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>

@@ -12,8 +12,9 @@ import {
   pullCloudDataToLocal,
   SUPABASE_SCHEMA_SQL,
 } from '../../services/cloudSync';
+import { StaffManagement } from './StaffManagement';
 
-export function StoreSettings({ settings, onSettingsUpdated }) {
+export function StoreSettings({ settings, onSettingsUpdated, currentUser }) {
   const [formData, setFormData] = useState(settings || INITIAL_SETTINGS);
   const [savedSuccess, setSavedSuccess] = useState(false);
 
@@ -388,6 +389,9 @@ export function StoreSettings({ settings, onSettingsUpdated }) {
             </div>
           </div>
         </div>
+
+        {/* SECTION: STAFF & CASHIER PIN MANAGEMENT */}
+        <StaffManagement currentUser={currentUser} />
 
         {/* Store Profile */}
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">

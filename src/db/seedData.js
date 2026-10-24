@@ -218,3 +218,31 @@ export const INITIAL_SETTINGS = {
   supabaseUrl: "",
   supabaseAnonKey: "",
 };
+
+export const INITIAL_USERS = [
+  {
+    name: "Store Admin / Owner",
+    username: "admin",
+    pin: "1234",
+    role: "admin",
+    counterName: "Admin Station",
+    createdAt: new Date().toISOString(),
+  },
+  {
+    name: "Cashier Rahul",
+    username: "counter1",
+    pin: "1111",
+    role: "cashier",
+    counterName: "Counter 1",
+    createdAt: new Date().toISOString(),
+  },
+  {
+    name: "Cashier Priya",
+    username: "counter2",
+    pin: "2222",
+    role: "cashier",
+    counterName: "Counter 2",
+    createdAt: new Date().toISOString(),
+  },
+];
+

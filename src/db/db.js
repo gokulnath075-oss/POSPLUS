@@ -1,5 +1,5 @@
 import Dexie from 'dexie';
-import { INITIAL_PRODUCTS, INITIAL_CUSTOMERS, INITIAL_SETTINGS } from './seedData';
+import { INITIAL_PRODUCTS, INITIAL_CUSTOMERS, INITIAL_SETTINGS, INITIAL_USERS } from './seedData';
 import { syncSaleToCloud } from '../services/cloudSync';
 
 export const db = new Dexie('PosPlusClothingDB');
@@ -12,6 +12,17 @@ db.version(1).stores({
   returns: '++id, &returnNo, originalInvoiceNo, date',
   expenses: '++id, date, category, amount',
   settings: 'key',
+});
+
+db.version(2).stores({
+  products: '++id, name, brand, category, gender, hsn',
+  customers: '++id, name, &phone, loyaltyPoints, creditBalance, totalSpent',
+  sales: '++id, &invoiceNo, date, customerPhone, paymentMethod, netTotal, status',
+  heldBills: '++id, heldAt, customerPhone',
+  returns: '++id, &returnNo, originalInvoiceNo, date',
+  expenses: '++id, date, category, amount',
+  settings: 'key',
+  users: '++id, &username, role, pin',
 });
 
 // Seed initial data if database is fresh
@@ -30,7 +41,49 @@ export async function initializeDatabase() {
   if (!settingsExist) {
     await db.settings.put({ key: 'store_settings', value: INITIAL_SETTINGS });
   }
+
+  const userCount = await db.users.count();
+  if (userCount === 0) {
+    await db.users.bulkAdd(INITIAL_USERS);
+  }
 }
+
+// User Authentication & Management
+export async function authenticateUser(usernameOrRole, pin) {
+  const cleanInput = (usernameOrRole || '').trim().toLowerCase();
+  const cleanPin = (pin || '').trim();
+
+  const user = await db.users
+    .filter(u => u.username.toLowerCase() === cleanInput || (u.role.toLowerCase() === cleanInput && u.pin === cleanPin))
+    .first();
+
+  if (user && user.pin === cleanPin) {
+    return { success: true, user };
+  }
+  return { success: false, message: 'Invalid Username or PIN' };
+}
+
+export async function getAllUsers() {
+  return await db.users.toArray();
+}
+
+export async function saveUser(userData) {
+  if (userData.id) {
+    await db.users.update(userData.id, userData);
+    return userData.id;
+  } else {
+    return await db.users.add(userData);
+  }
+}
+
+export async function deleteUser(id) {
+  const user = await db.users.get(id);
+  if (user && user.username === 'admin') {
+    throw new Error('Cannot delete primary Admin account.');
+  }
+  await db.users.delete(id);
+}
+
 
 // Get store settings
 export async function getStoreSettings() {
