@@ -9,7 +9,6 @@ import { ReturnExchange } from './components/returns/ReturnExchange';
 import { ReportsDashboard } from './components/reports/ReportsDashboard';
 import { StoreSettings } from './components/settings/StoreSettings';
 import { LoginModal } from './components/auth/LoginModal';
-import { initRealtimeCloudSync, pullCloudDataToLocal } from './services/cloudSync';
 import { Loader2, ShieldAlert, X, ArrowRight, Lock } from 'lucide-react';
 
 export default function App() {
@@ -52,18 +51,6 @@ export default function App() {
     }
     setup();
   }, []);
-
-  // Real-time Multi-Counter Cloud Sync Listener
-  useEffect(() => {
-    if (settings?.enableCloudSync && settings?.supabaseUrl && settings?.supabaseAnonKey) {
-      const subInstance = initRealtimeCloudSync(settings.supabaseUrl, settings.supabaseAnonKey, (table, payload) => {
-        pullCloudDataToLocal(settings.supabaseUrl, settings.supabaseAnonKey).catch(err => console.warn('Sync refresh err:', err));
-      });
-      return () => {
-        subInstance?.unsubscribe?.();
-      };
-    }
-  }, [settings?.enableCloudSync, settings?.supabaseUrl, settings?.supabaseAnonKey]);
 
   // Global Function Keys (F1: POS, F2: Barcode Tag, F3: Inventory, F4: Khata, F5: Returns, F6: Reports)
   useEffect(() => {
@@ -190,7 +177,7 @@ export default function App() {
         )}
 
         {activeTab === 'customers' && (
-          <CustomerManager />
+          <CustomerManager settings={settings} />
         )}
 
         {activeTab === 'returns' && (

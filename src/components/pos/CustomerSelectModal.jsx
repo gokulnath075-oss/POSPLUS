@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db } from '../../db/db';
+import { db, saveOrUpdateCustomer } from '../../db/db';
 import { Users, Search, UserPlus, Phone, Star, Wallet, X, Check } from 'lucide-react';
 import { formatCurrency } from '../../utils/formatters';
 
@@ -40,7 +40,7 @@ export function CustomerSelectModal({ onSelect, onClose }) {
       return;
     }
 
-    const newCustomer = {
+    const savedCustomer = await saveOrUpdateCustomer({
       name: name.trim(),
       phone: cleanPhone,
       email: email.trim(),
@@ -50,12 +50,9 @@ export function CustomerSelectModal({ onSelect, onClose }) {
       creditBalance: 0,
       totalSpent: 0,
       visitCount: 0,
-      createdAt: new Date().toISOString(),
-    };
+    });
 
-    const id = await db.customers.add(newCustomer);
-    newCustomer.id = id;
-    onSelect(newCustomer);
+    onSelect(savedCustomer);
   };
 
   return (

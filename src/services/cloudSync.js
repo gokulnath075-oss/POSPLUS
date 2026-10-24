@@ -170,13 +170,13 @@ export async function pushLocalDataToCloud(url, key) {
     const customerPayload = localCustomers.map(c => ({
       name: c.name,
       phone: c.phone,
-      email: c.email,
-      address: c.address,
-      gstin: c.gstin,
-      loyalty_points: c.loyaltyPoints || 0,
-      credit_balance: c.creditBalance || 0,
-      total_spent: c.totalSpent || 0,
-      visit_count: c.visitCount || 0,
+      email: c.email || '',
+      address: c.address || '',
+      gstin: c.gstin || '',
+      loyalty_points: Number(c.loyaltyPoints ?? c.loyalty_points) || 0,
+      credit_balance: Number(c.creditBalance ?? c.credit_balance) || 0,
+      total_spent: Number(c.totalSpent ?? c.total_spent) || 0,
+      visit_count: Number(c.visitCount ?? c.visit_count) || 0,
       updated_at: new Date().toISOString(),
     }));
 
@@ -231,10 +231,10 @@ export async function pullCloudDataToLocal(url, key) {
         email: cc.email,
         address: cc.address,
         gstin: cc.gstin,
-        loyalty_points: Number(cc.loyalty_points) || 0,
-        credit_balance: Number(cc.credit_balance) || 0,
-        total_spent: Number(cc.total_spent) || 0,
-        visit_count: Number(cc.visit_count) || 0,
+        loyaltyPoints: Number(cc.loyalty_points) || 0,
+        creditBalance: Number(cc.credit_balance) || 0,
+        totalSpent: Number(cc.total_spent) || 0,
+        visitCount: Number(cc.visit_count) || 0,
       };
       if (existing) {
         await db.customers.update(existing.id, custObj);
@@ -288,6 +288,37 @@ export async function syncSaleToCloud(saleRecord, url, key) {
   }
 }
 
+// Push or update a single customer in the cloud in real-time
+export async function syncCustomerToCloud(customer, url, key) {
+  if (!url || !key || !customer?.phone) return;
+  try {
+    const client = getSupabaseClient(url, key);
+    if (!client) return;
+
+    const payload = {
+      name: customer.name,
+      phone: customer.phone,
+      email: customer.email || '',
+      address: customer.address || '',
+      gstin: customer.gstin || '',
+      loyalty_points: Number(customer.loyaltyPoints ?? customer.loyalty_points) || 0,
+      credit_balance: Number(customer.creditBalance ?? customer.credit_balance) || 0,
+      total_spent: Number(customer.totalSpent ?? customer.total_spent) || 0,
+      visit_count: Number(customer.visitCount ?? customer.visit_count) || 0,
+      updated_at: new Date().toISOString(),
+    };
+
+    const { error } = await client.from('customers').upsert(payload, { onConflict: 'phone' });
+    if (error) {
+      console.warn('Customer cloud sync warning:', error);
+    } else {
+      console.log('Customer synced to cloud:', customer.phone);
+    }
+  } catch (err) {
+    console.error('Failed to sync customer to cloud (queued for offline):', err);
+  }
+}
+
 // Start Realtime WebSocket listener for Multi-Counter live updates
 export function initRealtimeCloudSync(url, key, onRemoteUpdate) {
   if (!url || !key) return null;
@@ -300,13 +331,63 @@ export function initRealtimeCloudSync(url, key, onRemoteUpdate) {
 
   realtimeSubscription = client
     .channel('pos_realtime_channel')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, (payload) => {
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, async (payload) => {
+      try {
+        if (payload.new && payload.new.name) {
+          const cp = payload.new;
+          const existing = await db.products.where('name').equals(cp.name).first();
+          const productObj = {
+            name: cp.name,
+            brand: cp.brand,
+            category: cp.category,
+            gender: cp.gender,
+            material: cp.material,
+            hsn: cp.hsn,
+            taxRate: Number(cp.tax_rate) || 5,
+            description: cp.description,
+            variants: cp.variants || [],
+            updatedAt: cp.updated_at,
+          };
+          if (existing) {
+            await db.products.update(existing.id, productObj);
+          } else {
+            await db.products.add(productObj);
+          }
+        }
+      } catch (e) {
+        console.error('Error applying realtime product update:', e);
+      }
       onRemoteUpdate?.('products', payload);
     })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'sales' }, (payload) => {
       onRemoteUpdate?.('sales', payload);
     })
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'customers' }, (payload) => {
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'customers' }, async (payload) => {
+      try {
+        if (payload.new && payload.new.phone) {
+          const cc = payload.new;
+          const existing = await db.customers.where('phone').equals(cc.phone).first();
+          const custObj = {
+            name: cc.name,
+            phone: cc.phone,
+            email: cc.email,
+            address: cc.address,
+            gstin: cc.gstin,
+            loyaltyPoints: Number(cc.loyalty_points) || 0,
+            creditBalance: Number(cc.credit_balance) || 0,
+            totalSpent: Number(cc.total_spent) || 0,
+            visitCount: Number(cc.visit_count) || 0,
+          };
+          if (existing) {
+            await db.customers.update(existing.id, custObj);
+          } else {
+            await db.customers.add(custObj);
+          }
+          console.log('Real-time customer updated locally:', cc.phone);
+        }
+      } catch (e) {
+        console.error('Error applying realtime customer update:', e);
+      }
       onRemoteUpdate?.('customers', payload);
     })
     .subscribe((status) => {

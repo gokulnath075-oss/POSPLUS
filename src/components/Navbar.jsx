@@ -51,25 +51,14 @@ export function Navbar({ activeTab, onTabChange, settings, currentUser, onLogout
             <h1 className="text-sm font-black text-white tracking-wide uppercase">
               {settings?.storeName || 'POS PLUS APPARELS'}
             </h1>
-            {settings?.enableCloudSync && settings?.supabaseUrl ? (
-              <span
-                onClick={() => onTabChange('settings')}
-                className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-semibold flex items-center gap-1 cursor-pointer hover:bg-emerald-500/20"
-                title="Realtime Multi-Counter Cloud Sync Active"
-              >
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                Cloud Synced
-              </span>
-            ) : (
-              <span
-                onClick={() => onTabChange('settings')}
-                className="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700 font-semibold flex items-center gap-1 cursor-pointer hover:text-white"
-                title="Running locally offline. Click to configure Cloud Sync."
-              >
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
-                Local DB
-              </span>
-            )}
+            <span
+              onClick={() => onTabChange('settings')}
+              className="text-[10px] px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-semibold flex items-center gap-1.5 cursor-pointer hover:bg-emerald-500/20 transition"
+              title="Automatic Built-in Database is active and saving all sales, products, and Khata records in real time. Click to view Database Settings."
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+              Auto-Saved DB
+            </span>
           </div>
           <p className="text-[11px] text-slate-400 truncate max-w-xs">{settings?.tagline || 'Fashion & Lifestyle Retail'}</p>
         </div>

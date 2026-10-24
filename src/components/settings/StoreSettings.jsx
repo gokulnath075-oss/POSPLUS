@@ -1,29 +1,24 @@
 import React, { useState } from 'react';
+import { useLiveQuery } from 'dexie-react-hooks';
 import { db, saveStoreSettings } from '../../db/db';
 import {
   Settings, Store, QrCode, Printer, FileText, Download,
-  Upload, RefreshCw, Check, ShieldCheck, Cloud, Globe,
-  Copy, Database, Sparkles, CheckCircle2, AlertCircle, Laptop
+  Upload, RefreshCw, Check, ShieldCheck, Globe,
+  Database, Sparkles, CheckCircle2, AlertCircle, Laptop,
+  Package, Users, Receipt, HardDrive
 } from 'lucide-react';
 import { INITIAL_PRODUCTS, INITIAL_CUSTOMERS, INITIAL_SETTINGS } from '../../db/seedData';
-import {
-  testCloudConnection,
-  pushLocalDataToCloud,
-  pullCloudDataToLocal,
-  SUPABASE_SCHEMA_SQL,
-} from '../../services/cloudSync';
 import { StaffManagement } from './StaffManagement';
 
 export function StoreSettings({ settings, onSettingsUpdated, currentUser }) {
   const [formData, setFormData] = useState(settings || INITIAL_SETTINGS);
   const [savedSuccess, setSavedSuccess] = useState(false);
 
-  // Cloud Sync state
-  const [testingConnection, setTestingConnection] = useState(false);
-  const [testResult, setTestResult] = useState(null);
-  const [copiedSql, setCopiedSql] = useState(false);
-  const [syncInProgress, setSyncInProgress] = useState(false);
-  const [syncStatusMsg, setSyncStatusMsg] = useState('');
+  // Live database records
+  const productCount = useLiveQuery(() => db.products.count(), []) ?? 0;
+  const customerCount = useLiveQuery(() => db.customers.count(), []) ?? 0;
+  const salesCount = useLiveQuery(() => db.sales.count(), []) ?? 0;
+  const heldCount = useLiveQuery(() => db.heldBills.count(), []) ?? 0;
 
   const handleChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -35,66 +30,6 @@ export function StoreSettings({ settings, onSettingsUpdated, currentUser }) {
     onSettingsUpdated(formData);
     setSavedSuccess(true);
     setTimeout(() => setSavedSuccess(false), 3000);
-  };
-
-  // Test Supabase Connection
-  const handleTestCloud = async () => {
-    if (!formData.supabaseUrl || !formData.supabaseAnonKey) {
-      setTestResult({ success: false, message: 'Please enter both Supabase Project URL and Anon Public Key.' });
-      return;
-    }
-    setTestingConnection(true);
-    setTestResult(null);
-    const result = await testCloudConnection(formData.supabaseUrl, formData.supabaseAnonKey);
-    setTestingConnection(false);
-    setTestResult(result);
-  };
-
-  // Copy SQL script to clipboard
-  const handleCopySql = () => {
-    navigator.clipboard.writeText(SUPABASE_SCHEMA_SQL);
-    setCopiedSql(true);
-    setTimeout(() => setCopiedSql(false), 3000);
-  };
-
-  // Push local items to cloud
-  const handlePushToCloud = async () => {
-    if (!formData.supabaseUrl || !formData.supabaseAnonKey) {
-      alert('Please configure your Supabase Project URL and Key first.');
-      return;
-    }
-    setSyncInProgress(true);
-    setSyncStatusMsg('Pushing local products and customers to Cloud...');
-    try {
-      const res = await pushLocalDataToCloud(formData.supabaseUrl, formData.supabaseAnonKey);
-      setSyncStatusMsg(`Successfully pushed ${res.pushedProducts} products and ${res.pushedCustomers} customers to Cloud!`);
-      setTimeout(() => setSyncStatusMsg(''), 5000);
-    } catch (err) {
-      alert('Cloud Push Error: ' + err.message);
-      setSyncStatusMsg('');
-    } finally {
-      setSyncInProgress(false);
-    }
-  };
-
-  // Pull cloud items to local
-  const handlePullFromCloud = async () => {
-    if (!formData.supabaseUrl || !formData.supabaseAnonKey) {
-      alert('Please configure your Supabase Project URL and Key first.');
-      return;
-    }
-    setSyncInProgress(true);
-    setSyncStatusMsg('Pulling cloud data down to this device...');
-    try {
-      const res = await pullCloudDataToLocal(formData.supabaseUrl, formData.supabaseAnonKey);
-      setSyncStatusMsg(`Pulled ${res.pulledProducts} products and ${res.pulledCustomers} customers from Cloud!`);
-      setTimeout(() => setSyncStatusMsg(''), 5000);
-    } catch (err) {
-      alert('Cloud Pull Error: ' + err.message);
-      setSyncStatusMsg('');
-    } finally {
-      setSyncInProgress(false);
-    }
   };
 
   // Full Database Backup to JSON
@@ -194,10 +129,10 @@ export function StoreSettings({ settings, onSettingsUpdated, currentUser }) {
         <div>
           <h1 className="text-2xl font-black text-white flex items-center gap-2">
             <Settings className="w-7 h-7 text-indigo-400" />
-            Store Settings, Cloud Sync & Online Hosting
+            Store Profile & Automatic Database Settings
           </h1>
           <p className="text-sm text-slate-400">
-            Configure your shop profile, multi-device cloud sync, Vercel/Netlify hosting, and UPI
+            Configure your clothing shop profile, automated database, billing counters, and UPI payments
           </p>
         </div>
 
@@ -209,39 +144,80 @@ export function StoreSettings({ settings, onSettingsUpdated, currentUser }) {
       </div>
 
       <form onSubmit={handleSave} className="space-y-6">
-        {/* SECTION: CLOUD DATABASE SYNC & MULTI-DEVICE (NEW) */}
-        <div className="bg-slate-900 border-2 border-indigo-500/40 rounded-2xl p-6 space-y-5 shadow-xl shadow-indigo-950/20">
+        {/* SECTION: AUTOMATIC BUILT-IN DATABASE & STORAGE */}
+        <div className="bg-slate-900 border-2 border-emerald-500/40 rounded-2xl p-6 space-y-5 shadow-xl shadow-emerald-950/20">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
             <div className="flex items-center gap-3">
-              <div className="p-2.5 bg-indigo-500/10 text-indigo-400 rounded-xl border border-indigo-500/20">
-                <Cloud className="w-6 h-6" />
+              <div className="p-2.5 bg-emerald-500/10 text-emerald-400 rounded-xl border border-emerald-500/20">
+                <Database className="w-6 h-6" />
               </div>
               <div>
                 <h2 className="text-base font-bold text-white flex items-center gap-2">
-                  Real-Time Multi-Device Cloud Sync
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-600/30 text-indigo-300 font-mono font-semibold">
-                    Supabase PostgreSQL
+                  Automatic Built-in Database
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-mono font-semibold flex items-center gap-1 border border-emerald-500/30">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                    Auto-Saving Active
                   </span>
                 </h2>
                 <p className="text-xs text-slate-400">
-                  Sync stock and sales across Counter 1, Counter 2, and Owner's Mobile in real time
+                  Zero setup required. Garments, barcodes, Khata ledgers, and sales are automatically stored in high-performance local database.
                 </p>
               </div>
             </div>
 
-            {/* Toggle Enable */}
-            <label className="flex items-center gap-2.5 bg-slate-950 px-4 py-2 rounded-xl border border-slate-800 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={Boolean(formData.enableCloudSync)}
-                onChange={(e) => handleChange('enableCloudSync', e.target.checked)}
-                className="w-4 h-4 rounded accent-indigo-600 cursor-pointer"
-              />
-              <span className="text-xs font-bold text-white">Enable Cloud Sync</span>
-            </label>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-slate-400 font-medium">Engine:</span>
+              <span className="text-xs px-2.5 py-1 bg-slate-950 text-indigo-300 border border-slate-800 rounded-lg font-mono font-semibold">
+                IndexedDB v2 (Offline-First)
+              </span>
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Live Records Health Grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-800 flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-indigo-500/10 text-indigo-400">
+                <Package className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="text-lg font-black text-white">{productCount}</div>
+                <div className="text-[11px] text-slate-400">Garment Catalog</div>
+              </div>
+            </div>
+
+            <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-800 flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-teal-500/10 text-teal-400">
+                <Users className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="text-lg font-black text-white">{customerCount}</div>
+                <div className="text-[11px] text-slate-400">Customer Records</div>
+              </div>
+            </div>
+
+            <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-800 flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-400">
+                <Receipt className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="text-lg font-black text-white">{salesCount}</div>
+                <div className="text-[11px] text-slate-400">Sales Invoices</div>
+              </div>
+            </div>
+
+            <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-800 flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-amber-500/10 text-amber-400">
+                <HardDrive className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="text-lg font-black text-white">{heldCount}</div>
+                <div className="text-[11px] text-slate-400">Held / Parked Bills</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Counter Name & Auto-Save Information */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-1">
             <div>
               <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
                 <Laptop className="w-3.5 h-3.5 text-indigo-400" /> This Counter / Terminal Name
@@ -253,94 +229,49 @@ export function StoreSettings({ settings, onSettingsUpdated, currentUser }) {
                 onChange={(e) => handleChange('counterName', e.target.value)}
                 className="mt-1 w-full bg-slate-950 border border-slate-700 text-white rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 font-semibold"
               />
-              <span className="text-[10px] text-slate-500 mt-0.5 block">Identifies which billing machine made each sale</span>
+              <span className="text-[10px] text-slate-500 mt-0.5 block">Printed on thermal receipts and invoice headers</span>
             </div>
 
-            <div className="md:col-span-2">
-              <label className="text-xs font-semibold text-slate-300">Supabase Project URL</label>
-              <input
-                type="text"
-                placeholder="https://yourprojectid.supabase.co"
-                value={formData.supabaseUrl || ''}
-                onChange={(e) => handleChange('supabaseUrl', e.target.value)}
-                className="mt-1 w-full bg-slate-950 border border-slate-700 text-white rounded-xl px-3 py-2 text-sm font-mono focus:outline-none focus:border-indigo-500"
-              />
-            </div>
-
-            <div className="md:col-span-3">
-              <label className="text-xs font-semibold text-slate-300">Supabase Anon Public API Key</label>
-              <input
-                type="password"
-                placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-                value={formData.supabaseAnonKey || ''}
-                onChange={(e) => handleChange('supabaseAnonKey', e.target.value)}
-                className="mt-1 w-full bg-slate-950 border border-slate-700 text-white rounded-xl px-3 py-2 text-sm font-mono focus:outline-none focus:border-indigo-500"
-              />
+            <div className="md:col-span-2 bg-slate-950 p-3 rounded-xl border border-slate-800 flex flex-col justify-center space-y-1">
+              <div className="flex items-center gap-2 text-xs font-semibold text-emerald-400">
+                <ShieldCheck className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                Automatic Real-time Data Protection
+              </div>
+              <p className="text-[11px] text-slate-400">
+                Every sale transaction, barcode scan, customer Khata repayment, and price tag change is committed automatically into this terminal's persistent storage without relying on external cloud servers.
+              </p>
             </div>
           </div>
 
-          {/* Test & Sync Actions */}
+          {/* Database Actions: Backup, Restore & Reset */}
           <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  disabled={testingConnection}
-                  onClick={handleTestCloud}
-                  className="flex items-center gap-1.5 px-3 py-2 bg-indigo-600/20 text-indigo-300 hover:bg-indigo-600/30 border border-indigo-500/30 rounded-lg text-xs font-bold transition disabled:opacity-50"
-                >
-                  <RefreshCw className={`w-3.5 h-3.5 ${testingConnection ? 'animate-spin' : ''}`} />
-                  Test Cloud Connection
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleCopySql}
-                  className="flex items-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-lg text-xs font-bold transition"
-                >
-                  {copiedSql ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                  {copiedSql ? 'Copied 1-Click SQL Script!' : 'Copy Supabase SQL Setup Script'}
-                </button>
-
-                <button
-                  type="button"
-                  disabled={syncInProgress}
-                  onClick={handlePushToCloud}
-                  className="flex items-center gap-1.5 px-3 py-2 bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600/30 border border-emerald-500/30 rounded-lg text-xs font-bold transition disabled:opacity-50"
-                >
-                  <Upload className="w-3.5 h-3.5" />
-                  Push Local Stock & Customers to Cloud
-                </button>
-
-                <button
-                  type="button"
-                  disabled={syncInProgress}
-                  onClick={handlePullFromCloud}
-                  className="flex items-center gap-1.5 px-3 py-2 bg-sky-600/20 text-sky-400 hover:bg-sky-600/30 border border-sky-500/30 rounded-lg text-xs font-bold transition disabled:opacity-50"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  Pull Cloud Stock to this Terminal
-                </button>
-              </div>
+            <div className="text-xs font-bold text-slate-300 flex items-center gap-2">
+              <HardDrive className="w-4 h-4 text-indigo-400" />
+              Database Backup & Disaster Recovery
             </div>
 
-            {/* Test result status display */}
-            {testResult && (
-              <div className={`p-3 rounded-lg text-xs flex items-center gap-2 ${
-                testResult.success
-                  ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
-                  : 'bg-amber-500/10 text-amber-400 border border-amber-500/30'
-              }`}>
-                {testResult.success ? <CheckCircle2 className="w-4 h-4 flex-shrink-0" /> : <AlertCircle className="w-4 h-4 flex-shrink-0" />}
-                <span>{testResult.message}</span>
-              </div>
-            )}
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                onClick={handleBackupDatabase}
+                className="flex items-center gap-2 px-4 py-2 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-300 font-bold rounded-xl text-xs transition cursor-pointer"
+              >
+                <Download className="w-4 h-4" /> Download Complete JSON Backup
+              </button>
 
-            {syncStatusMsg && (
-              <div className="p-3 bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 rounded-lg text-xs font-medium">
-                {syncStatusMsg}
-              </div>
-            )}
+              <label className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl text-xs transition cursor-pointer border border-slate-700">
+                <Upload className="w-4 h-4" /> Restore from Backup File
+                <input type="file" accept=".json" onChange={handleRestoreDatabase} className="hidden" />
+              </label>
+
+              <button
+                type="button"
+                onClick={handleResetDemoData}
+                className="flex items-center gap-2 px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 font-bold rounded-xl text-xs transition border border-red-500/20 ml-auto cursor-pointer"
+              >
+                <RefreshCw className="w-4 h-4" /> Reset Demo Indian Catalog
+              </button>
+            </div>
           </div>
         </div>
 
@@ -604,39 +535,6 @@ export function StoreSettings({ settings, onSettingsUpdated, currentUser }) {
           </button>
         </div>
       </form>
-
-      {/* Database Backup & Restore */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
-        <h2 className="text-base font-bold text-white flex items-center gap-2 border-b border-slate-800 pb-3">
-          <ShieldCheck className="w-4 h-4 text-emerald-400" /> Offline Database Backup & Disaster Recovery
-        </h2>
-        <p className="text-xs text-slate-400">
-          Your shop data is stored 100% offline and safely in your local machine. Export regular backups to your pen drive or cloud storage.
-        </p>
-
-        <div className="flex flex-wrap items-center gap-4 pt-2">
-          <button
-            type="button"
-            onClick={handleBackupDatabase}
-            className="flex items-center gap-2 px-4 py-2.5 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-300 font-bold rounded-xl text-xs transition"
-          >
-            <Download className="w-4 h-4" /> Download Complete JSON Backup
-          </button>
-
-          <label className="flex items-center gap-2 px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl text-xs transition cursor-pointer border border-slate-700">
-            <Upload className="w-4 h-4" /> Restore from Backup File
-            <input type="file" accept=".json" onChange={handleRestoreDatabase} className="hidden" />
-          </label>
-
-          <button
-            type="button"
-            onClick={handleResetDemoData}
-            className="flex items-center gap-2 px-4 py-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 font-bold rounded-xl text-xs transition border border-red-500/20 ml-auto"
-          >
-            <RefreshCw className="w-4 h-4" /> Reset Demo Clothing Data
-          </button>
-        </div>
-      </div>
     </div>
   );
 }

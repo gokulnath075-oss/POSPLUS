@@ -1,6 +1,5 @@
 import Dexie from 'dexie';
 import { INITIAL_PRODUCTS, INITIAL_CUSTOMERS, INITIAL_SETTINGS, INITIAL_USERS } from './seedData';
-import { syncSaleToCloud } from '../services/cloudSync';
 
 export const db = new Dexie('PosPlusClothingDB');
 
@@ -96,6 +95,33 @@ export async function saveStoreSettings(settings) {
   await db.settings.put({ key: 'store_settings', value: settings });
 }
 
+// Save or update customer locally and push to cloud
+export async function saveOrUpdateCustomer(customerData) {
+  let customerId = customerData.id;
+  const cleanPhone = customerData.phone?.trim()?.replace(/[^0-9]/g, '');
+  if (!cleanPhone) throw new Error('Customer mobile number is required.');
+
+  const existing = await db.customers.where('phone').equals(cleanPhone).first();
+  const payload = {
+    ...customerData,
+    phone: cleanPhone,
+    loyaltyPoints: Number(customerData.loyaltyPoints) || 0,
+    creditBalance: Number(customerData.creditBalance) || 0,
+    totalSpent: Number(customerData.totalSpent) || 0,
+    visitCount: Number(customerData.visitCount) || 0,
+    updatedAt: new Date().toISOString(),
+  };
+
+  if (existing) {
+    await db.customers.update(existing.id, payload);
+    customerId = existing.id;
+  } else {
+    customerId = await db.customers.add(payload);
+  }
+
+  return { ...payload, id: customerId };
+}
+
 // Rapid barcode lookup: finds product and matching variant
 export async function findByBarcode(barcodeQuery) {
   if (!barcodeQuery) return null;
@@ -175,13 +201,6 @@ export async function processSaleTransaction(saleData) {
         });
       }
     }
-
-    // 4. Background sync to Supabase Cloud if configured
-    getStoreSettings().then(settings => {
-      if (settings?.enableCloudSync && settings?.supabaseUrl && settings?.supabaseAnonKey) {
-        syncSaleToCloud(saleData, settings.supabaseUrl, settings.supabaseAnonKey);
-      }
-    });
 
     return saleId;
   });

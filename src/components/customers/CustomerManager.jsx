@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db } from '../../db/db';
+import { db, saveOrUpdateCustomer } from '../../db/db';
 import { Users, Search, Plus, Phone, Star, Wallet, ArrowDownLeft, History, X, Check } from 'lucide-react';
 import { formatCurrency, formatDate, formatDateTime } from '../../utils/formatters';
 
-export function CustomerManager() {
+export function CustomerManager({ settings }) {
   const customers = useLiveQuery(() => db.customers.toArray(), []) || [];
   const sales = useLiveQuery(() => db.sales.toArray(), []) || [];
 
@@ -42,7 +42,7 @@ export function CustomerManager() {
       return;
     }
 
-    await db.customers.add({
+    await saveOrUpdateCustomer({
       name: newName.trim(),
       phone: cleanPhone,
       email: newEmail.trim(),
@@ -52,7 +52,6 @@ export function CustomerManager() {
       creditBalance: 0,
       totalSpent: 0,
       visitCount: 0,
-      createdAt: new Date().toISOString(),
     });
 
     setNewName('');
@@ -75,7 +74,8 @@ export function CustomerManager() {
     const currentBalance = selectedCustomer.creditBalance || 0;
     const newBalance = Math.max(0, currentBalance - amt);
 
-    await db.customers.update(selectedCustomer.id, {
+    await saveOrUpdateCustomer({
+      ...selectedCustomer,
       creditBalance: newBalance,
     });
 
